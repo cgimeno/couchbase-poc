@@ -1,0 +1,8 @@
+---
+ couchbase_username: "admin"
+ couchbase_password: "password"
+ couchbase_bucket_name: "myBucket"
+ couchbase_bucket_replicas: "1"
+ couchbase_bucket_type: "couchbase"
+ couchbase_main_user: "user"
+ couchbase_main_password: "password"

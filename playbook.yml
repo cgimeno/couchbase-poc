@@ -1,0 +1,13 @@
+---
+
+- hosts: all
+  become: "yes"
+  become_user: "root"
+  roles:
+   - install-couchbase
+
+- hosts: master
+  become: "yes"
+  become_user: "root"
+  roles:
+   - initialise-cluster

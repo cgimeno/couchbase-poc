@@ -1,0 +1,57 @@
+---
+
+- name: Check if our cluster has been initialized previously
+  stat:
+   path: "/opt/couchbase/initialized"
+  register: initialized
+
+- name: Initialise couchbase cluster
+  shell: "/opt/couchbase/bin/couchbase-cli cluster-init -c \
+          127.0.0.1:8091  --cluster-username={{ couchbase_username }} \
+          --cluster-password={{ couchbase_password }} --cluster-port=8091"
+  when: initialized.stat.exists == False
+
+- name: Add aditional nodes
+  shell: "/opt/couchbase/bin/couchbase-cli server-add -c 127.0.0.1:8091 \
+           -u {{ couchbase_username }} -p {{ couchbase_password }} \ 
+           --server-add={{ hostvars[item]['ansible_eth1']['ipv4']['address'] }}:8091
+           --server-add-username={{ couchbase_username }} \
+           --server-add-password={{ couchbase_password }}"
+  with_items: "{{ groups['slave'] }}"
+  when: initialized.stat.exists == False
+
+- name: Rebalance the cluster
+  shell: "/opt/couchbase/bin/couchbase-cli rebalance -c 127.0.0.1:8091 \
+          -u {{ couchbase_username }} -p {{ couchbase_password }}"
+  when: initialized.stat.exists == False
+
+- name: Create the bucket {{ couchbase_bucket_name }}
+  shell: "/opt/couchbase/bin/couchbase-cli bucket-create -c 127.0.0.1:8091 \
+          -u {{ couchbase_username }} -p {{ couchbase_password }} \
+          --bucket {{ couchbase_bucket_name }} --bucket-type {{ couchbase_bucket_type }} \
+          --bucket-replica {{ couchbase_bucket_replicas }} --bucket-ramsize 1024"
+  when: initialized.stat.exists == False
+
+- name: "Annnnd create user for our new bucket"
+  shell: "/opt/couchbase/bin/couchbase-cli user-manage -c 127.0.0.1:8091 \
+         -u {{ couchbase_username }} -p {{ couchbase_password }} --set \
+         --rbac-username {{ couchbase_main_user }} --rbac-password {{ couchbase_main_password }} \
+         --roles bucket_full_access[{{ couchbase_bucket_name }}] --auth-domain local"
+  when: initialized.stat.exists == False
+
+- name: Enable automatic failover
+  shell: "/opt/couchbase/bin/couchbase-cli setting-autofailover -c 127.0.0.1:8091 \
+         -u {{ couchbase_username }} -p {{ couchbase_password }} --enable-auto-failover 1 \
+         --auto-failover-timeout 30"
+  when: initialized.stat.exists == False
+
+- name: Create a lock to avoid problems if you execute this role again
+  file:
+   path: "/opt/couchbase/initialized"
+   state: "touch"
+   mode: "u=r"
+  when: initialized.stat.exists == False
+
+
+
+   

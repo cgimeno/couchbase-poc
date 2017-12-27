@@ -1,0 +1,27 @@
+---
+
+- name: Install python-selinux bindings
+  yum:
+   name: "libselinux-python"
+   state: "present"
+
+- name: Download couchbase package
+  shell: "wget {{ couchbase_package_url }} -O /tmp/couchbase-server-community-5.0.1-centos6.x86_64.rpm"
+
+- name: Install couchbase package
+  yum:
+   name: "/tmp/couchbase-server-community-5.0.1-centos6.x86_64.rpm"
+   state: "present"
+
+- name: Ensure that couchbase-server is started
+  service:
+   name: "couchbase-server"
+   state: "started"
+   enabled: "yes"
+
+- name: Wait for couchbase to become available
+  wait_for:
+   timeout: 60
+   delay: 10
+   port: 8091
+
